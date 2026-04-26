@@ -1,0 +1,8 @@
+# Mengabaikan file yang memuat kredensial dan rahasia
+project/koneksi.php
+
+# Mengabaikan script utilitas atau perbaikan data sementara
+project/fix_admin_password.php
+
+# Mengabaikan folder yang biasanya digunakan untuk menyimpan file upload/dinamis pengguna (contoh)
+project/uploads/
