@@ -1,92 +1,32 @@
 <?php
-session_start();
-include "koneksi.php";
+require_once "koneksi.php";
+require_once "Auth.php";
 
-// Jika sudah login, redirect ke halaman yang sesuai
-if (isset($_SESSION['user'])) {
-    if ($_SESSION['user']['role'] === 'admin') {
-        header("Location: index.php");
-    } else {
-        header("Location: Home.php");
-    }
-    exit();
-}
+Auth::startSession();
 
-// Generate CSRF token jika belum ada
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
+$auth  = new Auth();
 $error = '';
 
+// Jika sudah login, redirect ke halaman yang sesuai
+$auth->redirectIfLoggedIn();
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verifikasi CSRF token
-    $csrf = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $csrf)) {
-        $error = 'Permintaan tidak valid. Silakan muat ulang halaman.';
-    } else {
-        $username = trim($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
 
-        if (empty($username) || empty($password)) {
-            $error = 'Username dan password tidak boleh kosong.';
+    $result = $auth->login($username, $password);
+
+    if ($result['success']) {
+        if ($result['role'] === 'admin') {
+            header("Location: admin.php");
         } else {
-            // Gunakan prepared statement untuk keamanan
-            $stmt = mysqli_prepare($koneksi, "SELECT id_pengguna, username, password, role FROM pasien WHERE username = ? LIMIT 1");
-            if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "s", $username);
-                mysqli_stmt_execute($stmt);
-                $result = mysqli_stmt_get_result($stmt);
-
-                if ($row = mysqli_fetch_assoc($result)) {
-                    $passwordValid = false;
-
-                    if (password_verify($password, $row['password'])) {
-                        // Password sudah dalam format hash bcrypt — OK
-                        $passwordValid = true;
-                    } elseif ($password === $row['password']) {
-                        // Password masih plain text (data lama/admin awal)
-                        // Auto-upgrade ke bcrypt supaya aman ke depannya
-                        $passwordValid = true;
-                        $newHash = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-                        $upStmt = mysqli_prepare($koneksi, "UPDATE pasien SET password = ? WHERE id_pengguna = ?");
-                        if ($upStmt) {
-                            mysqli_stmt_bind_param($upStmt, "si", $newHash, $row['id_pengguna']);
-                            mysqli_stmt_execute($upStmt);
-                            mysqli_stmt_close($upStmt);
-                        }
-                    }
-
-                    if ($passwordValid) {
-                        // Regenerate session ID untuk mencegah session fixation
-                        session_regenerate_id(true);
-                        $_SESSION['user'] = $row;
-
-                        // Hapus CSRF token lama
-                        unset($_SESSION['csrf_token']);
-
-                        if ($row['role'] === 'admin') {
-                            header("Location: index.php");
-                        } else {
-                            header("Location: Home.php");
-                        }
-                        exit();
-                    } else {
-                        $error = 'Username atau password salah.';
-                    }
-                } else {
-                    // Pesan yang sama agar tidak bocorkan info username
-                    $error = 'Username atau password salah.';
-                }
-                mysqli_stmt_close($stmt);
-            } else {
-                $error = 'Terjadi kesalahan server. Coba lagi.';
-            }
+            header("Location: Home.php");
         }
+        exit();
+    } else {
+        $error = $result['error'];
     }
 }
-
-$csrfToken = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -312,8 +252,7 @@ $csrfToken = $_SESSION['csrf_token'];
             <?php endif; ?>
 
             <form method="POST" action="login.php" novalidate>
-                <!-- CSRF Token -->
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+
 
                 <!-- Username -->
                 <div class="form-group">

@@ -1,91 +1,34 @@
 <?php
-session_start();
-include "koneksi.php";
+require_once "koneksi.php";
+require_once "Auth.php";
+
+Auth::startSession();
+
+$auth = new Auth();
 
 // Jika sudah login, redirect ke home
-if (isset($_SESSION['user'])) {
-    header("Location: Home.php");
-    exit();
-}
+$auth->redirectIfLoggedIn();
 
-// Generate CSRF token jika belum ada
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
-$error   = '';
-$success = '';
+$error         = '';
+$success       = '';
 $usernameValue = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    $username = trim($_POST['username'] ?? '');
+    $password = $_POST['password'] ?? '';
+    $confirm  = $_POST['confirm_password'] ?? '';
 
-    // ── 1. CSRF Verification ─────────────────────────────────
-    $csrf = $_POST['csrf_token'] ?? '';
-    if (!hash_equals($_SESSION['csrf_token'], $csrf)) {
-        $error = 'Permintaan tidak valid. Silakan muat ulang halaman.';
+    $usernameValue = htmlspecialchars($username);
+
+    $result = $auth->register($username, $password, $confirm);
+
+    if ($result['success']) {
+        $success       = 'Akun berhasil dibuat! Silakan login.';
+        $usernameValue = '';
     } else {
-        // ── 2. Ambil & Sanitasi Input ─────────────────────────
-        $username = trim($_POST['username'] ?? '');
-        $password = $_POST['password'] ?? '';
-        $confirm  = $_POST['confirm_password'] ?? '';
-
-        $usernameValue = htmlspecialchars($username);
-
-        // ── 3. Validasi ───────────────────────────────────────
-        if (empty($username)) {
-            $error = 'Username tidak boleh kosong.';
-        } elseif (strlen($username) < 3 || strlen($username) > 50) {
-            $error = 'Username harus antara 3–50 karakter.';
-        } elseif (!preg_match('/^[a-zA-Z0-9_\-]+$/', $username)) {
-            $error = 'Username hanya boleh huruf, angka, underscore, dan strip.';
-        } elseif (strlen($password) < 8) {
-            $error = 'Password minimal 8 karakter.';
-        } elseif (strlen($password) > 128) {
-            $error = 'Password terlalu panjang.';
-        } elseif ($password !== $confirm) {
-            $error = 'Konfirmasi password tidak cocok.';
-        } else {
-            // ── 4. Cek duplikat username (prepared statement) ──
-            $stmt = mysqli_prepare($koneksi, "SELECT id_pengguna FROM pasien WHERE username = ? LIMIT 1");
-            if ($stmt) {
-                mysqli_stmt_bind_param($stmt, "s", $username);
-                mysqli_stmt_execute($stmt);
-                mysqli_stmt_store_result($stmt);
-
-                if (mysqli_stmt_num_rows($stmt) > 0) {
-                    $error = 'Username sudah digunakan. Pilih username lain.';
-                    mysqli_stmt_close($stmt);
-                } else {
-                    mysqli_stmt_close($stmt);
-
-                    // ── 5. Hash Password ───────────────────────
-                    $hashedPassword = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
-
-                    // ── 6. Simpan ke database ──────────────────
-                    $insert = mysqli_prepare($koneksi, "INSERT INTO pasien (username, password, role) VALUES (?, ?, 'pasien')");
-                    if ($insert) {
-                        mysqli_stmt_bind_param($insert, "ss", $username, $hashedPassword);
-                        if (mysqli_stmt_execute($insert)) {
-                            // Regenerate CSRF setelah sukses
-                            $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-                            $success = 'Akun berhasil dibuat! Silakan login.';
-                            $usernameValue = '';
-                        } else {
-                            $error = 'Registrasi gagal. Silakan coba lagi.';
-                        }
-                        mysqli_stmt_close($insert);
-                    } else {
-                        $error = 'Terjadi kesalahan server.';
-                    }
-                }
-            } else {
-                $error = 'Terjadi kesalahan server.';
-            }
-        }
+        $error = $result['error'];
     }
 }
-
-$csrfToken = $_SESSION['csrf_token'];
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -339,8 +282,7 @@ $csrfToken = $_SESSION['csrf_token'];
             <?php endif; ?>
 
             <form method="POST" action="register.php" novalidate autocomplete="off">
-                <!-- CSRF Token -->
-                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($csrfToken) ?>">
+
 
                 <!-- Username -->
                 <div class="form-group">
