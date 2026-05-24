@@ -7,6 +7,5 @@ Auth::startSession();
 $auth = new Auth();
 $auth->logout();
 
-// Redirect ke halaman Home
 header("Location: Home.php");
 exit();

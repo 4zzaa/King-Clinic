@@ -1,8 +1,4 @@
 <?php
-/**
- * Class Auth
- * Menangani semua operasi autentikasi: login, register, cek sesi, logout.
- */
 class Auth
 {
     private Database $db;
@@ -12,11 +8,6 @@ class Auth
         $this->db = Database::getInstance();
     }
 
-    // ─── Session Management ──────────────────────────────────
-
-    /**
-     * Memulai session jika belum aktif.
-     */
     public static function startSession(): void
     {
         if (session_status() === PHP_SESSION_NONE) {
@@ -24,40 +15,22 @@ class Auth
         }
     }
 
-    /**
-     * Cek apakah user sudah login.
-     */
     public function isLoggedIn(): bool
     {
         return isset($_SESSION['user']);
     }
 
-    /**
-     * Ambil data user dari session.
-     */
     public function currentUser(): ?array
     {
         return $_SESSION['user'] ?? null;
     }
 
-    /**
-     * Ambil role user saat ini.
-     */
     public function currentRole(): string
     {
         return $_SESSION['user']['role'] ?? '';
     }
 
 
-    // ─── Login ───────────────────────────────────────────────
-
-    /**
-     * Proses login user.
-     *
-     * @param string $username
-     * @param string $password
-     * @return array ['success' => bool, 'error' => string, 'role' => string]
-     */
     public function login(string $username, string $password): array
     {
         $result = ['success' => false, 'error' => '', 'role' => ''];
@@ -89,12 +62,10 @@ class Auth
 
         $passwordValid = false;
 
+
         if (password_verify($password, $row['password'])) {
-            // Password sudah dalam format hash bcrypt — OK
             $passwordValid = true;
         } elseif ($password === $row['password']) {
-            // Password masih plain text (data lama/admin awal)
-            // Auto-upgrade ke bcrypt supaya aman ke depannya
             $passwordValid = true;
             $this->upgradePasswordHash($row['id_pengguna'], $password);
         }
@@ -104,7 +75,6 @@ class Auth
             return $result;
         }
 
-        // Regenerate session ID untuk mencegah session fixation
         session_regenerate_id(true);
         $_SESSION['user'] = $row;
 
@@ -114,9 +84,6 @@ class Auth
         return $result;
     }
 
-    /**
-     * Upgrade plain-text password ke bcrypt hash.
-     */
     private function upgradePasswordHash(int $userId, string $plainPassword): void
     {
         $newHash = password_hash($plainPassword, PASSWORD_BCRYPT, ['cost' => 12]);
@@ -128,21 +95,10 @@ class Auth
         }
     }
 
-    // ─── Register ────────────────────────────────────────────
-
-    /**
-     * Proses registrasi user baru.
-     *
-     * @param string $username
-     * @param string $password
-     * @param string $confirmPassword
-     * @return array ['success' => bool, 'error' => string]
-     */
-    public function register(string $username, string $password, string $confirmPassword): array
+    public function register(string $username, string $password, string $confirmPassword, string $noHp = ''): array
     {
         $result = ['success' => false, 'error' => ''];
 
-        // Validasi username
         if (empty($username)) {
             $result['error'] = 'Username tidak boleh kosong.';
             return $result;
@@ -156,9 +112,8 @@ class Auth
             return $result;
         }
 
-        // Validasi password
-        if (strlen($password) < 8) {
-            $result['error'] = 'Password minimal 8 karakter.';
+        if (strlen($password) < 3) {
+            $result['error'] = 'Password minimal 3 karakter.';
             return $result;
         }
         if (strlen($password) > 128) {
@@ -170,16 +125,14 @@ class Auth
             return $result;
         }
 
-        // Cek duplikat username
         if ($this->isUsernameTaken($username)) {
             $result['error'] = 'Username sudah digunakan. Pilih username lain.';
             return $result;
         }
 
-        // Hash password dan simpan
         $hashedPassword = password_hash($password, PASSWORD_BCRYPT, ['cost' => 12]);
         $stmt = $this->db->prepare(
-            "INSERT INTO pasien (username, password, role) VALUES (?, ?, 'pasien')"
+            "INSERT INTO pasien (username, password, no_hp, role) VALUES (?, ?, ?, 'pasien')"
         );
 
         if (!$stmt) {
@@ -187,7 +140,7 @@ class Auth
             return $result;
         }
 
-        $stmt->bind_param('ss', $username, $hashedPassword);
+        $stmt->bind_param('sss', $username, $hashedPassword, $noHp);
 
         if ($stmt->execute()) {
             $result['success'] = true;
@@ -199,9 +152,6 @@ class Auth
         return $result;
     }
 
-    /**
-     * Cek apakah username sudah dipakai.
-     */
     private function isUsernameTaken(string $username): bool
     {
         $stmt = $this->db->prepare(
@@ -221,16 +171,11 @@ class Auth
         return $taken;
     }
 
-    // ─── Auth Guard ──────────────────────────────────────────
-
-    /**
-     * Redirect ke halaman yang sesuai jika sudah login.
-     */
     public function redirectIfLoggedIn(): void
     {
         if ($this->isLoggedIn()) {
             if ($this->currentRole() === 'admin') {
-                header('Location: admin.php');
+                header('Location: admin_dashboard.php');
             } else {
                 header('Location: Home.php');
             }
@@ -238,10 +183,6 @@ class Auth
         }
     }
 
-    /**
-     * Proteksi halaman — redirect ke login jika belum login.
-     * Opsional: bisa cek role tertentu.
-     */
     public function guard(string $requiredRole = ''): void
     {
         if (!$this->isLoggedIn()) {
@@ -251,7 +192,7 @@ class Auth
 
         if ($requiredRole !== '' && $this->currentRole() !== $requiredRole) {
             if ($this->currentRole() === 'admin') {
-                header('Location: admin.php');
+                header('Location: admin_dashboard.php');
             } else {
                 header('Location: Home.php');
             }
@@ -259,16 +200,10 @@ class Auth
         }
     }
 
-    // ─── Logout ──────────────────────────────────────────────
-
-    /**
-     * Logout: hapus session, cookie, dan destroy.
-     */
     public function logout(): void
     {
         $_SESSION = [];
 
-        // Hapus cookie session jika ada
         if (ini_get('session.use_cookies')) {
             $params = session_get_cookie_params();
             setcookie(

@@ -6,7 +6,6 @@ Auth::startSession();
 
 $auth = new Auth();
 
-// Jika sudah login, redirect ke home
 $auth->redirectIfLoggedIn();
 
 $error         = '';
@@ -17,10 +16,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username'] ?? '');
     $password = $_POST['password'] ?? '';
     $confirm  = $_POST['confirm_password'] ?? '';
+    $noHp    = trim($_POST['no_hp'] ?? '');
 
     $usernameValue = htmlspecialchars($username);
 
-    $result = $auth->register($username, $password, $confirm);
+    $result = $auth->register($username, $password, $confirm, $noHp);
 
     if ($result['success']) {
         $success       = 'Akun berhasil dibuat! Silakan login.';
@@ -255,7 +255,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="wrapper">
 
-        <!-- Card -->
         <div class="card">
             <div class="card-title">Daftar Akun</div>
 
@@ -271,20 +270,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <?php endif; ?>
 
             <?php if ($success): ?>
-            <div class="alert alert-success" role="alert">
-                <svg viewBox="0 0 20 20" fill="currentColor" width="18" height="18">
-                    <path fill-rule="evenodd"
-                        d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z"
-                        clip-rule="evenodd" />
-                </svg>
-                <?= htmlspecialchars($success) ?> <a href="login.php">Login sekarang →</a>
-            </div>
+            <script>
+                alert('<?= addslashes($success) ?>');
+                window.location.href = 'login.php';
+            </script>
             <?php endif; ?>
 
             <form method="POST" action="register.php" novalidate autocomplete="off">
 
 
-                <!-- Username -->
                 <div class="form-group">
                     <label for="username">Username</label>
                     <div class="input-wrap">
@@ -300,10 +294,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             value="<?= $usernameValue ?>"
                             maxlength="50" autocomplete="off" spellcheck="false" required>
                     </div>
-                    <p class="hint">Huruf, angka, underscore, strip. Min. 3 karakter.</p>
+                    <!-- <p class="hint">Huruf, angka, underscore, strip. Min. 3 karakter.</p> -->
                 </div>
 
-                <!-- Password -->
+                <div class="form-group">
+                    <label for="no_hp">No HP</label>
+                    <div class="input-wrap">
+                        <span class="input-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <rect width="14" height="20" x="5" y="2" rx="2" />
+                                <line x1="12" y1="18" x2="12" y2="18" />
+                            </svg>
+                        </span>
+                        <input type="text" id="no_hp" name="no_hp"
+                            placeholder="08xxxxxxxxxx"
+                            maxlength="20" autocomplete="tel">
+                    </div>
+                </div>
+
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-wrap">
@@ -315,7 +324,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </svg>
                         </span>
                         <input type="password" id="password" name="password"
-                            placeholder="Min. 8 karakter"
+                            placeholder="Masukkan password"
                             maxlength="128" autocomplete="new-password" required>
                         <button type="button" class="toggle-pw" onclick="togglePw('password', this)"
                             aria-label="Tampilkan password">
@@ -329,7 +338,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 </div>
 
-                <!-- Confirm Password -->
                 <div class="form-group">
                     <label for="confirm_password">Konfirmasi Password</label>
                     <div class="input-wrap">
@@ -383,7 +391,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 
 
-    // Prevent double submit
     document.querySelector('form').addEventListener('submit', function () {
         const btn = document.getElementById('submit-btn');
         btn.disabled = true;

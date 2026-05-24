@@ -7,7 +7,6 @@ Auth::startSession();
 $auth  = new Auth();
 $error = '';
 
-// Jika sudah login, redirect ke halaman yang sesuai
 $auth->redirectIfLoggedIn();
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -18,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($result['success']) {
         if ($result['role'] === 'admin') {
-            header("Location: admin.php");
+            header("Location: admin_dashboard.php");
         } else {
             header("Location: Home.php");
         }
@@ -236,7 +235,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <body>
     <div class="wrapper">
 
-        <!-- Card -->
         <div class="card">
             <div class="card-title">Masuk ke Akun</div>
 
@@ -254,7 +252,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <form method="POST" action="login.php" novalidate>
 
 
-                <!-- Username -->
                 <div class="form-group">
                     <label for="username">Username</label>
                     <div class="input-wrap">
@@ -272,7 +269,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 </div>
 
-                <!-- Password -->
                 <div class="form-group">
                     <label for="password">Password</label>
                     <div class="input-wrap">

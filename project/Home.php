@@ -1,8 +1,12 @@
 <?php
 session_start();
-// Halaman publik — tidak membutuhkan login untuk dilihat
+include 'koneksi.php';
 $isLoggedIn = isset($_SESSION['user']);
 $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : '';
+
+$dokterList = [];
+$q = mysqli_query($koneksi, "SELECT id_dokter, nama_dokter FROM dokter ORDER BY id_dokter ASC LIMIT 10");
+if ($q) { while ($r = mysqli_fetch_assoc($q)) { $dokterList[] = $r; } }
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -102,20 +106,69 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
             backdrop-filter: blur(24px);
             -webkit-backdrop-filter: blur(24px);
         }
+
+        html { scroll-behavior: smooth; }
+
+        .reveal {
+            opacity: 0;
+            transform: translateY(40px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal.visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .reveal-left {
+            opacity: 0;
+            transform: translateX(-50px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal-left.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .reveal-right {
+            opacity: 0;
+            transform: translateX(50px);
+            transition: opacity 0.7s ease, transform 0.7s ease;
+        }
+        .reveal-right.visible {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        .reveal-scale {
+            opacity: 0;
+            transform: scale(0.9);
+            transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .reveal-scale.visible {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        .stagger-1 { transition-delay: 0.1s; }
+        .stagger-2 { transition-delay: 0.2s; }
+        .stagger-3 { transition-delay: 0.3s; }
+        .stagger-4 { transition-delay: 0.4s; }
+        .stagger-5 { transition-delay: 0.5s; }
+        .stagger-6 { transition-delay: 0.15s; }
+        .stagger-7 { transition-delay: 0.25s; }
+        .stagger-8 { transition-delay: 0.35s; }
+        .stagger-9 { transition-delay: 0.45s; }
+        .stagger-10 { transition-delay: 0.55s; }
     </style>
 </head>
 
 <body class="bg-surface font-body text-on-surface">
-    <!-- TopNavBar -->
     <header class="fixed top-0 w-full z-50 bg-[#f7f9ff]/80 backdrop-blur-md shadow-[0px_10px_30px_rgba(0,75,116,0.04)]">
         <nav class="flex justify-between items-center px-8 h-20 w-full max-w-screen-2xl mx-auto">
             <div class="text-2xl font-bold tracking-tighter text-[#005d90] font-headline">
                 King Dental
             </div>
             <div class="hidden md:flex items-center gap-8 font-headline font-semibold tracking-tight">
-                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#">Services</a>
-                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#">Doctor</a>
-                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#">Consultation</a>
+                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#services">Services</a>
+                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#doctors">Doctor</a>
+                <a class="text-slate-500 hover:text-[#005d90] transition-all" href="#reviews">Reviews</a>
             </div>
             <div class="flex items-center gap-4">
                 <?php if (!$isLoggedIn): ?>
@@ -133,19 +186,14 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
     </header>
 
     <main class="pt-20">
-        <!-- Hero Section -->
         <section class="relative overflow-hidden px-8 py-20 lg:py-32 max-w-screen-2xl mx-auto bg-surface">
             <div class="flex flex-col lg:flex-row items-center gap-16">
                 <div class="flex-1 space-y-8 z-10">
-                    <!-- <div
-                        class="inline-flex items-center gap-2 px-5 py-2 rounded-lg bg-white border border-slate-100 shadow-sm text-blue-500 font-headline text-sm font-bold">
-                        👋 Hey! We Are King Dental
-                    </div> -->
                     <h1
-                        class="font-headline text-5xl lg:text-7xl font-extrabold tracking-tight text-[#0f172a] leading-[1.1]">
-                        Helping You to <br /> Bring Back Your <br />
+                        class="font-headline text-5xl lg:text-6xl font-extrabold tracking-tight text-[#0f172a] leading-[1.1]">
+                        Membantu Anda Mengembalikan <br /> 
                         <span class="text-[#3b82f6] relative inline-block">
-                            Happy Smile
+                            Senyum Anda
                             <svg class="absolute -right-10 -top-2 w-8 h-8 text-[#3b82f6]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <line x1="2" y1="12" x2="6" y2="12"></line>
                                 <line x1="18" y1="12" x2="22" y2="12"></line>
@@ -163,34 +211,29 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         berpengalaman untuk memastikan senyum Anda selalu sehat dan indah.
                     </p>
                     <div class="flex flex-wrap gap-4 pt-4">
-                        <button
-                            class="px-8 py-4 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-xl font-headline font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        <a href="booking.php"
+                            class="px-8 py-4 bg-[#3b82f6] hover:bg-[#2563eb] text-white rounded-xl font-headline font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-block">
                             Booking Sekarang
-                        </button>
-                        <button
-                            class="px-8 py-4 bg-white border border-[#3b82f6] hover:bg-[#3b82f6] text-[#3b82f6] hover:text-white rounded-xl font-headline font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+                        </a>
+                        <a href="#services"
+                            class="px-8 py-4 bg-white border border-[#3b82f6] hover:bg-[#3b82f6] text-[#3b82f6] hover:text-white rounded-xl font-headline font-bold text-lg shadow-lg hover:shadow-xl hover:-translate-y-1 transition-all duration-300 inline-block">
                             Layanan Kami
-                        </button>
+                        </a>
                     </div>
                 </div>
                 <div class="flex-1 relative w-full flex justify-center lg:justify-end">
-                    <div class="relative w-full max-w-md z-10 mr-0 lg:mr-10">
-                        <img alt="Female Dentist" class="w-full h-auto object-contain rounded-b-3xl relative z-10"
-                            referrerPolicy="no-referrer"
-                            src="https://img.freepik.com/free-photo/portrait-smiling-female-doctor-holding-clipboard_23-2148154562.jpg?w=740&t=st=1713247000~exp=1713247600~hmac=a4b08d" style="mix-blend-mode: multiply;" />
-                        
-                     
+                    <div class="relative w-full max-w-lg z-10 mr-0 lg:mr-10">
+                        <img alt="King Dental Clinic" class="w-full h-[420px] object-cover rounded-3xl relative z-10 shadow-2xl"
+                            src="assets/dental clinic.jpg" />
                     </div>
-                    <!-- Decorative Background for image like Dentic -->
                     <div class="absolute bottom-0 right-10 w-[400px] h-[450px] bg-blue-100/50 rounded-t-full -z-0"></div>
                 </div>
             </div>
         </section>
 
-        <!-- Rating & Trust Section -->
-        <section class="bg-surface-container-low py-24">
+        <section class="bg-surface-container-low py-24" id="reviews">
             <div class="max-w-screen-2xl mx-auto px-8">
-                <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6">
+                <div class="flex flex-col md:flex-row justify-between items-end mb-16 gap-6 reveal">
                     <div class="space-y-4">
                         <h2 class="font-headline text-4xl font-bold tracking-tight">Apa Kata Mereka</h2>
                         <p class="text-on-surface-variant max-w-md text-lg">Ini adalah beberapa
@@ -218,11 +261,9 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         </div>
                     </div>
                 </div>
-                <!-- Reviews Grid -->
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-                    <!-- Card 1 -->
                     <div
-                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform">
+                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform reveal stagger-1">
                         <div class="flex gap-1 mb-6">
                             <span class="material-symbols-outlined text-tertiary" data-icon="star"
                                 style="font-variation-settings: 'FILL' 1;">star</span>
@@ -237,22 +278,21 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         </div>
                         <p class="text-on-surface-variant italic mb-8 leading-relaxed">
                             "Pelayanan nya bagus cepat dan memuaskan. Dokter nya juga jelasin nya detail dan terampil
-                            dalan menangani pasien""
+                            dalan menangani pasien"
                         </p>
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full overflow-hidden">
-                                <img alt="Rafie" class="w-full h-full object-cover" referrerPolicy="no-referrer"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuC33RtFjGTlA84XtNpnouyNBs_Mr64pFwo1WirLWG_lWHa1G5UydxsHbFJTqFo8S-_zmPMn-Fb9MTnDXmaFt_fFG9EIPtb2wPkDJtOEj15rNvv1TvVsOexEGoleE2o2IRwKkxHqtXfTjjlrjy94cPMJHDsV7bQ-7rUBDdSmxMNMbd_RL7_NGPbYulz0YcfmXa7XJdyGL-WVoK-d0QN4tLkrFAL0ZqBSPCDnCEoWysdDRqH39MEFsXPDv7tP3GNlbpw4b-M1AQHHbtY" />
-                            </div>
+                                <img alt="" class="w-full h-full object-cover" referrerPolicy="no-referrer"
+                                    src="assets/decul hama.jpeg" />
+                            </div>  
                             <div>
-                                <p class="font-bold">Rafie </p>
-                                <p class="text-xs text-slate-500 uppercase font-semibold">Pasien sejak 2021</p>
+                                <p class="font-bold">Decul </p>
+                                <p class="text-xs text-slate-500 uppercase font-semibold">Pasien sejak 2025</p>
                             </div>
                         </div>
                     </div>
-                    <!-- Card 2 -->
                     <div
-                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform">
+                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform reveal stagger-2">
                         <div class="flex gap-1 mb-6">
                             <span class="material-symbols-outlined text-tertiary" data-icon="star"
                                 style="font-variation-settings: 'FILL' 1;">star</span>
@@ -272,18 +312,17 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         </p>
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full overflow-hidden">
-                                <img alt="David M." class="w-full h-full object-cover" referrerPolicy="no-referrer"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuD6aKlAQKICYoI53DJEEv_Do-QMa-Q_S8jw--NVyX9egT5iGD_LrDxiXkmR1yyigciN9fqgSpB-KSZJpwV1-YpTAAPx-ErogLQ5oUnMKeWyOXVHM6wFtSLKrbZMkgFBZO3QONCXDiSAiqIDqHEHAKV7B1VxIOBSgiCHWEOcgIah700lzDOl79qBFt0zMq5LK79YodheHGMZ1zylSB00PkGd7o-mcqRN0LccPf7ntJuNaNEZevEQXRjx8EnYjICznyLl76IEC5afog4" />
+                                <img alt="Firman" class="w-full h-full object-cover" referrerPolicy="no-referrer"
+                                    src="assets/download.png" />
                             </div>
                             <div>
-                                <p class="font-bold">David Miller</p>
-                                <p class="text-xs text-slate-500 uppercase font-semibold">Patient since 2022</p>
+                                <p class="font-bold">Firman</p>
+                                <p class="text-xs text-slate-500 uppercase font-semibold">Pasien sejak 2025</p>
                             </div>
                         </div>
                     </div>
-                    <!-- Card 3 -->
                     <div
-                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform">
+                        class="bg-surface-container-lowest p-8 rounded-xl shadow-[0px_20px_40px_rgba(0,75,116,0.06)] hover:-translate-y-1 transition-transform reveal stagger-3">
                         <div class="flex gap-1 mb-6">
                             <span class="material-symbols-outlined text-tertiary" data-icon="star"
                                 style="font-variation-settings: 'FILL' 1;">star</span>
@@ -303,11 +342,11 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         </p>
                         <div class="flex items-center gap-4">
                             <div class="w-12 h-12 rounded-full overflow-hidden">
-                                <img alt="Elena R." class="w-full h-full object-cover" referrerPolicy="no-referrer"
-                                    src="https://lh3.googleusercontent.com/aida-public/AB6AXuAspH2ZdsDpE1H0EH85nzyt2PGXJ3EbsBRqY-cjRbef6sIUG1ismIS0chYkCoPxMf2gThMpkb3iB1-ASwpSH6sdn0bqkDtzxbLfT0GKWqbQHAe-dOqiXBKsOv7mrW8-Ml0sXe1wAhGgAR3rJXbptilHIGHY19PdcjqbQ8Cnkuoz2j2iVVsY66BWx36FisuKtoPl6JDtMBwTiuUbR2lZbGxwH-xkRjw8RIpUEaTO8McFap-bj4NETj5pkk5kCVEaYzmseSghIVdYEBE" />
+                                <img alt="Dimas" class="w-full h-full object-cover" referrerPolicy="no-referrer"
+                                    src="assets/download.png" />
                             </div>
                             <div>
-                                <p class="font-bold">Rasydan</p>
+                                <p class="font-bold">Dimas</p>
                                 <p class="text-xs text-slate-500 uppercase font-semibold">Pasien Baru</p>
                             </div>
                         </div>
@@ -316,144 +355,102 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
             </div>
         </section>
 
-        <!-- Our Doctors Section -->
-        <section class="py-24 bg-[#0d1b2a]">
+        <section class="py-24 bg-[#0d1b2a]" id="doctors">
             <div class="max-w-screen-2xl mx-auto px-8">
-                <!-- Header -->
-                <div class="mb-6">
+                <div class="mb-6 reveal">
                     <h2 class="font-headline text-4xl font-bold tracking-tight text-white">Dokter Kami</h2>
                     <p class="text-slate-400 max-w-xl text-lg mt-3">Ini adalah beberapa dokter kami yang bertugas di klinik ini</p>
                 </div>
 
-                <!-- Row 1: 5 doctors -->
+                <?php
+                $dokterImages = [
+                    1  => 'assets/dr tirta.jpeg',
+                    2  => 'assets/dr sayora.jpg',
+                    3  => 'assets/drg. Adelia Susanto.jpg',
+                    4  => 'assets/drg. Aswar Sandi.jpg',
+                    5  => 'assets/drg. Satria.jpg',
+                    6  => 'assets/drg chacha.jpg',
+                    7  => 'assets/drgdevya linda.jpg',
+                    8  => 'assets/drg. khansa.jpg',
+                    9  => 'assets/drg.Jocelin Sintano.jpg',
+                    10 => 'assets/Dokter Gigi Yudha Mahendra.jpg',
+                ];
+                $dokterSpesialis = [
+                    1  => 'Dokter Gigi Umum',
+                    2  => 'Ortodontis',
+                    3  => 'Spesialis Bedah Mulut',
+                    4  => 'Dokter Gigi Anak',
+                    5  => 'Spesialis Periodonti',
+                    6  => 'Endodontis',
+                    7  => 'Spesialis Prostodontia',
+                    8  => 'Dokter Gigi Umum',
+                    9  => 'Spesialis Konservasi',
+                    10 => 'Dokter Gigi Umum',
+                ];
+
+                $row1 = array_slice($dokterList, 0, 5);
+                $row2 = array_slice($dokterList, 5, 5);
+                ?>
+
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 mt-12">
-
-                    <!-- Doctor 1 --> 
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="assets/dr tirta.jpeg" alt="Dr. Tirta" class="w-full h-full object-cover">
+                    <?php foreach ($row1 as $i => $dok):
+                        $id   = $dok['id_dokter'];
+                        $nama = htmlspecialchars($dok['nama_dokter']);
+                        $img  = $dokterImages[$id] ?? '';
+                        $spec = $dokterSpesialis[$id] ?? 'Dokter Gigi';
+                        $stagger = $i + 1;
+                    ?>
+                    <div class="flex flex-col items-center text-center reveal-scale stagger-<?= $stagger ?>">
+                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600 hover:ring-blue-400 transition-all duration-300">
+                            <img src="<?= htmlspecialchars($img) ?>" alt="<?= $nama ?>" class="w-full h-full object-cover">
                         </div>
-                        <p class="font-headline font-bold text-white">Dr. Tirta</p>
-                        <p class="text-slate-400 text-sm mt-1">Dokter Gigi Umum</p>
+                        <p class="font-headline font-bold text-white"><?= $nama ?></p>
+                        <p class="text-slate-400 text-sm mt-1"><?= htmlspecialchars($spec) ?></p>
                     </div>
-
-                    <!-- Doctor 2 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Sari Dewi" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Sari Dewi</p>
-                        <p class="text-slate-400 text-sm mt-1">Ortodontis</p>
-                    </div>
-
-                    <!-- Doctor 3 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Reni Kusuma" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Reni Kusuma</p>
-                        <p class="text-slate-400 text-sm mt-1">Spesialis Bedah Mulut</p>
-                    </div>
-
-                    <!-- Doctor 4 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Budi Santoso" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Budi Santoso</p>
-                        <p class="text-slate-400 text-sm mt-1">Dokter Gigi Anak</p>
-                    </div>
-
-                    <!-- Doctor 5 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Hendra Wijaya" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Hendra Wijaya</p>
-                        <p class="text-slate-400 text-sm mt-1">Spesialis Periodonti</p>
-                    </div>
-
+                    <?php endforeach; ?>
                 </div>
 
-                <!-- Row 2: 5 more doctors -->
                 <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-10 mt-10 mb-4">
-
-                    <!-- Doctor 6 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Maya Lestari" class="w-full h-full object-cover">
+                    <?php foreach ($row2 as $i => $dok):
+                        $id   = $dok['id_dokter'];
+                        $nama = htmlspecialchars($dok['nama_dokter']);
+                        $img  = $dokterImages[$id] ?? '';
+                        $spec = $dokterSpesialis[$id] ?? 'Dokter Gigi';
+                        $stagger = $i + 6;
+                    ?>
+                    <div class="flex flex-col items-center text-center reveal-scale stagger-<?= $stagger ?>">
+                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600 hover:ring-blue-400 transition-all duration-300">
+                            <img src="<?= htmlspecialchars($img) ?>" alt="<?= $nama ?>" class="w-full h-full object-cover">
                         </div>
-                        <p class="font-headline font-bold text-white">Dr. Maya Lestari</p>
-                        <p class="text-slate-400 text-sm mt-1">Endodontis</p>
+                        <p class="font-headline font-bold text-white"><?= $nama ?></p>
+                        <p class="text-slate-400 text-sm mt-1"><?= htmlspecialchars($spec) ?></p>
                     </div>
-
-                    <!-- Doctor 7 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Fajar Nugroho" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Fajar Nugroho</p>
-                        <p class="text-slate-400 text-sm mt-1">Spesialis Prostodontia</p>
-                    </div>
-
-                    <!-- Doctor 8 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Indah Permata" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Indah Permata</p>
-                        <p class="text-slate-400 text-sm mt-1">Dokter Gigi Umum</p>
-                    </div>
-
-                    <!-- Doctor 9 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Rizky Ramadan" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Rizky Ramadan</p>
-                        <p class="text-slate-400 text-sm mt-1">VP, Operasional Klinik</p>
-                    </div>
-
-                    <!-- Doctor 10 -->
-                    <div class="flex flex-col items-center text-center">
-                        <div class="w-28 h-28 rounded-full overflow-hidden bg-slate-700 mb-4 ring-2 ring-slate-600">
-                            <!-- Isi src gambar di bawah ini -->
-                            <img src="" alt="Dr. Nadia Putri" class="w-full h-full object-cover">
-                        </div>
-                        <p class="font-headline font-bold text-white">Dr. Nadia Putri</p>
-                        <p class="text-slate-400 text-sm mt-1">VP, SDM Klinik</p>
-                    </div>
-
+                    <?php endforeach; ?>
                 </div>
             </div>
         </section>
 
-        <!-- Services Section (from database) -->
         <section class="py-24 px-8 max-w-screen-2xl mx-auto bg-[#f8fafc]" id="services">
-            <div class="text-center mb-16">
+            <div class="text-center mb-16 reveal">
                 <h2 class="font-headline text-4xl font-extrabold tracking-tight text-[#0f172a]">Layanan Kami</h2>
                 <p class="text-slate-500 max-w-xl mx-auto mt-4 text-lg">Pilihan perawatan terbaik untuk senyum sehat Anda</p>
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 <?php
-                include 'koneksi.php';
                 $query_layanan = mysqli_query($koneksi, "SELECT * FROM layanan LIMIT 6");
                 $descriptions = [
-                    'Pembersihan Karang' => 'Membersihkan plak dan karang gigi untuk mencegah penyakit gusi dan kerusakan gigi.',
-                    'Penambalan Gigi' => 'Memperbaiki gigi berlubang menggunakan bahan tambal berkualitas tinggi.',
-                    'Cabut Gigi' => 'Pencabutan gigi bermasalah yang sudah tidak dapat dipertahankan dengan aman.',
-                    'Pemutihan Gigi' => 'Mencerahkan warna gigi Anda agar tampak lebih bersih dan senyum lebih percaya diri.',
-                    'Pemasangan Behel' => 'Meratakan posisi gigi untuk memperbaiki estetika dan fungsi gigitan.',
-                    'Gigi Tiruan' => 'Pembuatan gigi palsu untuk menggantikan gigi yang hilang dan mengembalikan fungsi kunyah.'
+                    'Konsultasi Gigi'    => 'Pemeriksaan menyeluruh kondisi gigi dan mulut untuk diagnosa yang tepat.',
+                    'Scaling & Polishing'=> 'Membersihkan karang dan plak gigi agar lebih bersih dan gusi tetap sehat.',
+                    'Tambal Gigi'        => 'Memperbaiki gigi berlubang menggunakan bahan tambal berkualitas tinggi.',
+                    'Cabut Gigi'         => 'Pencabutan gigi bermasalah yang aman dan minim rasa sakit.',
+                    'Behel'              => 'Kawat gigi untuk meratakan posisi gigi demi estetika dan fungsi gigitan optimal.',
+                    'Root Canal'         => 'Perawatan saluran akar untuk menyelamatkan gigi yang terinfeksi parah.',
+                    'Whitening'          => 'Pemutihan gigi profesional untuk senyum lebih cerah dan percaya diri.',
+                    'Gigi Tiruan'        => 'Gigi palsu custom menggantikan gigi hilang dan mengembalikan fungsi kunyah.',
+                    'Pembersihan Karang' => 'Membersihkan plak dan karang gigi untuk mencegah penyakit gusi.',
+                    'Penambalan Gigi'    => 'Memperbaiki gigi berlubang menggunakan bahan tambal berkualitas tinggi.',
+                    'Pemutihan Gigi'     => 'Mencerahkan warna gigi agar tampak lebih bersih dan senyum lebih percaya diri.',
+                    'Pemasangan Behel'   => 'Meratakan posisi gigi untuk memperbaiki estetika dan fungsi gigitan.',
                 ];
                 if ($query_layanan && mysqli_num_rows($query_layanan) > 0) {
                     while ($row = mysqli_fetch_assoc($query_layanan)) {
@@ -461,11 +458,8 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
                         $harga = number_format($row['harga'], 0, ',', '.');
                         $desc = $descriptions[$nama] ?? 'Perawatan gigi profesional dengan peralatan modern dan nyaman.';
                 ?>
-                <div class="bg-white border border-slate-100 rounded-2xl p-8 hover:-translate-y-2 transition-transform duration-300 hover:shadow-xl shadow-sm flex flex-col justify-between group">
+                <div class="bg-white border border-slate-100 rounded-2xl p-8 hover:-translate-y-2 transition-transform duration-300 hover:shadow-xl shadow-sm flex flex-col justify-between group reveal">
                     <div>
-                        <div class="w-14 h-14 rounded-xl bg-blue-50 flex items-center justify-center mb-6 text-blue-500 group-hover:bg-blue-500 group-hover:text-white transition-colors duration-300">
-                            <span class="material-symbols-outlined text-3xl" data-icon="medical_services">medical_services</span>
-                        </div>
                         <h3 class="font-headline text-2xl font-bold mb-3 text-[#0f172a]"><?= $nama ?></h3>
                         <p class="text-slate-500 mb-6 leading-relaxed"><?= $desc ?></p>
                     </div>
@@ -486,12 +480,11 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
         </section>
     </main>
 
-    <!-- Footer -->
     <footer class="w-full py-12 border-t border-slate-200/50 bg-slate-50">
         <div class="flex flex-col md:flex-row justify-between items-center px-12 gap-6 max-w-screen-2xl mx-auto">
             <div class="flex flex-col items-center md:items-start gap-2">
-                <span class="font-headline font-bold text-[#005d90] text-xl">Clinical Serenit</span>
-                <p class="font-body text-sm text-slate-500 text-center md:text-left">© 2024 King Clinic. A
+                <span class="font-headline font-bold text-[#005d90] text-xl">King Dental</span>
+                <p class="font-body text-sm text-slate-500 text-center md:text-left">© 2026 King Clinic. A
                     restorative dental experience.</p>
             </div>
             <div class="flex flex-wrap justify-center gap-8">
@@ -505,6 +498,31 @@ $username   = $isLoggedIn ? htmlspecialchars($_SESSION['user']['username']) : ''
             </div>
         </div>
     </footer>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const revealEls = document.querySelectorAll('.reveal, .reveal-left, .reveal-right, .reveal-scale');
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.15, rootMargin: '0px 0px -40px 0px' });
+        revealEls.forEach(el => observer.observe(el));
+
+        document.querySelectorAll('a[href^="#"]').forEach(anchor => {
+            anchor.addEventListener('click', function(e) {
+                const target = document.querySelector(this.getAttribute('href'));
+                if (target) {
+                    e.preventDefault();
+                    const offset = 100;
+                    const top = target.getBoundingClientRect().top + window.pageYOffset - offset;
+                    window.scrollTo({ top: top, behavior: 'smooth' });
+                }
+            });
+        });
+    });
+    </script>
 </body>
 
 </html>
